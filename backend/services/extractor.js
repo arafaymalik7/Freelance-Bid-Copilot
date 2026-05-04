@@ -1,5 +1,6 @@
 const { callGemini } = require("../utils/geminiClient");
 const { assertArray, assertRequiredKeys, assertString, createError } = require("../utils/validation");
+const { summarizeRagContext } = require("./ragContextBuilder");
 
 const CATEGORY_HINTS = {
   web_development:
@@ -75,15 +76,19 @@ function validateExtraction(result) {
   };
 }
 
-async function extractRequirements(brief, category) {
+async function extractRequirements(brief, category, ragContext = null) {
   const hint = CATEGORY_HINTS[category] || CATEGORY_HINTS.other;
+  const contextSummary = summarizeRagContext(ragContext);
   const systemPrompt = `You are a requirements analyst for freelance projects.
-Extract structured requirements from vague or incomplete briefs and stay grounded in the text.`;
+Extract structured requirements from vague or incomplete briefs and stay grounded in the text.
+Use local RAG context only as a pattern reference; mark uncertain items as assumptions instead of facts.`;
 
   const userMessage = `Extract requirements from this ${category} project brief.
 ${hint}
 
 Brief: "${brief}"
+Local RAG context:
+${contextSummary}
 
 Respond with this exact JSON:
 {

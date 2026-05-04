@@ -22,7 +22,7 @@ const {
 
 describe("pipeline integration with mocked Gemini responses", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   test("full pipeline runs end to end", async () => {
@@ -122,4 +122,3 @@ describe("pipeline integration with mocked Gemini responses", () => {
     expect(proposal.client_reply.length).toBeGreaterThan(50);
   });
 });
-

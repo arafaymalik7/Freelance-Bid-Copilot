@@ -1,158 +1,126 @@
-import { BriefInput } from "./components/BriefInput.jsx";
-import { ClassificationCard } from "./components/ClassificationCard.jsx";
-import { ExtractionCard } from "./components/ExtractionCard.jsx";
+import { useState } from "react";
 import { LoadingSpinner } from "./components/LoadingSpinner.jsx";
-import { PricingCard } from "./components/PricingCard.jsx";
-import { ProposalCard } from "./components/ProposalCard.jsx";
-import { QuestionsCard } from "./components/QuestionsCard.jsx";
-import { RefinementPanel } from "./components/RefinementPanel.jsx";
-import { ScopeCard } from "./components/ScopeCard.jsx";
-import { StepProgress } from "./components/StepProgress.jsx";
-import { usePipeline } from "./hooks/usePipeline.js";
+import { BriefInbox } from "./components/deal/BriefInbox.jsx";
+import { DealRoom } from "./components/deal/DealRoom.jsx";
+import { useQuickBid } from "./hooks/useQuickBid.js";
 
-function ResultsNav({ onStartOver }) {
-  const jumpTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+function ErrorBanner({ error }) {
+  if (!error) {
+    return null;
+  }
 
   return (
-    <div className="sticky top-16 z-30 mx-auto mb-6 flex w-full max-w-6xl items-center justify-between rounded-2xl border border-navy-700 bg-navy-900/90 px-4 py-3 shadow-xl backdrop-blur">
-      <div className="flex items-center gap-3 text-sm text-slate-300">
-        <span className="text-navy-500">Jump to:</span>
-        <button className="transition hover:text-white" onClick={() => jumpTo("scope-section")} type="button">
-          Scope
-        </button>
-        <button className="transition hover:text-white" onClick={() => jumpTo("pricing-section")} type="button">
-          Pricing
-        </button>
-        <button className="transition hover:text-white" onClick={() => jumpTo("proposal-section")} type="button">
-          Proposal
+    <div className="fixed left-4 right-4 top-4 z-50 mx-auto max-w-3xl rounded-3xl border border-red-200 bg-red-50 p-4 text-red-800 shadow-2xl shadow-red-950/10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-heading font-semibold">Something needs attention</p>
+          <p className="mt-1 text-sm">{error.message}</p>
+        </div>
+        <button
+          className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+          onClick={() => error.retryFn?.()}
+          type="button"
+        >
+          Try again
         </button>
       </div>
-      <button className="rounded-lg border border-navy-600 px-4 py-2 text-sm text-slate-300 transition hover:bg-navy-700" onClick={onStartOver} type="button">
-        Start Over
-      </button>
+    </div>
+  );
+}
+
+function RecentBidsOverlay({ isOpen, onClose, onOpenRecent, recentBids = [] }) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 bg-[#17130d]/45 p-3 backdrop-blur-sm md:p-6" role="dialog" aria-modal="true">
+      <button className="absolute inset-0 cursor-default" onClick={onClose} type="button" aria-label="Close recent bids backdrop" />
+      <aside className="relative ml-auto flex h-full w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-[#d8c8ae] bg-[#fffdf8] shadow-2xl shadow-[#17130d]/30">
+        <header className="flex items-center justify-between gap-4 border-b border-[#eee2cf] px-5 py-4">
+          <div>
+            <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-amber-800">Saved locally</p>
+            <h2 className="font-heading text-2xl font-semibold text-[#17130d]">Recent bids</h2>
+          </div>
+          <button className="rounded-full bg-[#17130d] px-4 py-2 text-xs font-bold text-white hover:bg-amber-400 hover:text-[#17130d]" onClick={onClose} type="button">
+            Close
+          </button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {recentBids.length ? (
+            <div className="grid gap-3">
+              {recentBids.slice(0, 10).map((bid) => (
+                <button
+                  className="rounded-2xl border border-[#eee2cf] bg-[#fbf7ef] p-4 text-left transition hover:border-amber-300 hover:bg-white"
+                  key={bid.id}
+                  onClick={() => {
+                    onOpenRecent(bid);
+                    onClose();
+                  }}
+                  type="button"
+                >
+                  <p className="font-heading text-sm font-semibold leading-5 text-[#17130d]">{bid.title}</p>
+                  {bid.category ? (
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{bid.category.replaceAll("_", " ")}</p>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-2xl bg-[#fbf7ef] p-4 text-sm leading-6 text-slate-600">No bids saved yet.</p>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }
 
 function App() {
-  const {
-    classification,
-    continueToProposal,
-    error,
-    extraction,
-    gaps,
-    loading,
-    loadingMessage,
-    pricing,
-    profileStepLabel,
-    proposal,
-    refinementRound,
-    resetPipeline,
-    runFullPipeline,
-    scope,
-    step,
-    submitRefinement,
-  } = usePipeline();
+  const bid = useQuickBid();
+  const [recentOpen, setRecentOpen] = useState(false);
 
-  const currentStepLabel = profileStepLabel || (step === 0 ? "Brief" : "Proposal");
+  const generateDeal = async (brief, preferences) => {
+    await bid.generateBid(brief, preferences);
+  };
+
+  const openRecentBid = (savedBid) => {
+    bid.loadRecentBid(savedBid);
+  };
 
   return (
-    <div className="min-h-screen bg-navy-900 text-slate-300">
-      <header className="sticky top-0 z-40 border-b border-navy-700 bg-navy-900/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
-          <div>
-            <p className="font-heading text-lg font-semibold text-white">🚀 Bid Copilot</p>
-            <p className="text-xs uppercase tracking-[0.28em] text-navy-500">{currentStepLabel}</p>
-          </div>
-          <p className="text-sm text-slate-400">Step {step === 0 ? 1 : step} of 7</p>
-        </div>
-      </header>
+    <>
+      <ErrorBanner error={bid.error} />
 
-      <main className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col px-4 py-6 md:px-6">
-        {step > 0 ? <StepProgress currentStep={step} /> : null}
+      {bid.result ? (
+        <DealRoom
+          feedbackReceipt={bid.feedbackReceipt}
+          loading={bid.loading}
+          onImproveWithAnswers={bid.improveWithAnswers}
+          onNewBid={bid.reset}
+          onSaveBid={bid.saveCurrentBid}
+          onShowRecent={() => setRecentOpen(true)}
+          onSubmitFeedback={bid.submitFeedback}
+          recentBids={bid.recentBids}
+          result={bid.result}
+        />
+      ) : (
+        <BriefInbox
+          loading={bid.loading}
+          onGenerate={generateDeal}
+          onShowRecent={() => setRecentOpen(true)}
+          recentBids={bid.recentBids}
+        />
+      )}
 
-        {step === 7 && !loading ? <ResultsNav onStartOver={resetPipeline} /> : null}
+      <RecentBidsOverlay
+        isOpen={recentOpen}
+        onClose={() => setRecentOpen(false)}
+        onOpenRecent={openRecentBid}
+        recentBids={bid.recentBids}
+      />
 
-        {error ? (
-          <div className="mb-6 rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-heading text-base font-semibold text-white">Something blocked the pipeline</p>
-                <p className="mt-1 text-sm text-red-100">{error.message}</p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  className="rounded-lg bg-accent-500 px-5 py-2.5 font-medium text-white transition hover:bg-accent-400"
-                  onClick={() => error.retryFn?.()}
-                  type="button"
-                >
-                  Try Again
-                </button>
-                <button
-                  className="rounded-lg border border-navy-600 px-5 py-2.5 text-slate-300 transition hover:bg-navy-700"
-                  onClick={resetPipeline}
-                  type="button"
-                >
-                  Start Over
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {step === 0 ? (
-          <BriefInput loading={loading} onSubmit={runFullPipeline} />
-        ) : null}
-
-        {step >= 3 && step < 7 && classification && extraction && gaps ? (
-          <section className="flex flex-col gap-6">
-            <ClassificationCard classification={classification} />
-            <ExtractionCard extraction={extraction} />
-            {refinementRound > 0 ? (
-              <RefinementPanel
-                extraction={extraction}
-                loading={loading}
-                newQuestions={gaps.follow_up_questions}
-                onContinue={continueToProposal}
-                onSubmitMore={submitRefinement}
-                refinementRound={refinementRound}
-              />
-            ) : (
-              <QuestionsCard
-                gaps={gaps}
-                loading={loading}
-                onSkipToProposal={continueToProposal}
-                onSubmitAnswers={submitRefinement}
-              />
-            )}
-          </section>
-        ) : null}
-
-        {step === 7 && scope && pricing && proposal && classification && extraction ? (
-          <section className="flex flex-col gap-6">
-            <ScopeCard id="scope-section" scope={scope} />
-            <PricingCard id="pricing-section" pricing={pricing} />
-            <ProposalCard
-              category={classification.category}
-              onStartOver={resetPipeline}
-              projectSize={extraction.project_size}
-              proposal={proposal}
-              recommendedRange={[pricing.recommended.min, pricing.recommended.max]}
-              sectionId="proposal-section"
-              totalEstimatedDays={scope.total_estimated_days}
-            />
-          </section>
-        ) : null}
-      </main>
-
-      <footer className="border-t border-navy-800 px-4 py-5 text-center text-sm text-navy-500">
-        Built with Gemini AI
-      </footer>
-
-      {loading ? <LoadingSpinner message={loadingMessage} /> : null}
-    </div>
+      {bid.loading ? <LoadingSpinner message={bid.loadingMessage} /> : null}
+    </>
   );
 }
 

@@ -1,6 +1,8 @@
 const { callGemini } = require("../utils/geminiClient");
 const { assertArray, assertRequiredKeys, createError, normalizeQuestion } = require("../utils/validation");
 const { validateExtraction } = require("./extractor");
+const { MAX_FOLLOW_UP_QUESTIONS } = require("./gapDetector");
+const { summarizeRagContext } = require("./ragContextBuilder");
 
 const REFINE_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -62,17 +64,20 @@ function validateRefinement(result) {
     refinement_round: result.refinement_round,
     new_follow_up_questions: result.new_follow_up_questions
     .map(normalizeQuestion)
-      .filter((question) => question.question),
+      .filter((question) => question.question)
+      .slice(0, MAX_FOLLOW_UP_QUESTIONS),
   };
 }
 
-async function refineWithAnswers(brief, category, previousExtraction, userAnswers) {
+async function refineWithAnswers(brief, category, previousExtraction, userAnswers, ragContext = null) {
   const nextRound =
     typeof previousExtraction.refinement_round === "number" && previousExtraction.refinement_round > 0
       ? previousExtraction.refinement_round + 1
       : 1;
+  const contextSummary = summarizeRagContext(ragContext);
   const systemPrompt = `You are a requirements analyst updating a project brief.
-Use new client answers to refine the extraction, remove resolved assumptions, and leave only truly open questions.`;
+Use new client answers to refine the extraction, remove resolved assumptions, and leave only the top ${MAX_FOLLOW_UP_QUESTIONS} truly open questions.
+Use local RAG context as a checklist for likely unresolved details.`;
 
   const formattedAnswers = userAnswers
     .map((answer) => `Q: ${answer.question}\nA: ${answer.answer}`)
@@ -83,6 +88,8 @@ Use new client answers to refine the extraction, remove resolved assumptions, an
 Category: ${category}
 Original brief: "${brief}"
 Previous extraction: ${JSON.stringify(previousExtraction, null, 2)}
+Local RAG context:
+${contextSummary}
 
 New information (Q&A with client):
 ${formattedAnswers}

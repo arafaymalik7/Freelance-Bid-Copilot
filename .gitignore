@@ -7,4 +7,5 @@ coverage/
 !.env.example
 backend/.env
 frontend/.env
-
+backend/data/vectorIndex*.json
+backend/data/feedback/*.json

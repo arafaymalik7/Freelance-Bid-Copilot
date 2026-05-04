@@ -1,5 +1,8 @@
 const { callGemini } = require("../utils/geminiClient");
 const { assertArray, assertRequiredKeys, normalizeQuestion } = require("../utils/validation");
+const { summarizeRagContext } = require("./ragContextBuilder");
+
+const MAX_FOLLOW_UP_QUESTIONS = 3;
 
 const GAP_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -41,21 +44,28 @@ function validateGaps(result) {
 
   result.missing_info = cleanStringArray(result.missing_info);
   result.risk_flags = cleanStringArray(result.risk_flags);
-  result.follow_up_questions = result.follow_up_questions.map(normalizeQuestion).filter((question) => question.question);
+  result.follow_up_questions = result.follow_up_questions
+    .map(normalizeQuestion)
+    .filter((question) => question.question)
+    .slice(0, MAX_FOLLOW_UP_QUESTIONS);
 
   return result;
 }
 
-async function detectGaps(brief, category, extraction) {
+async function detectGaps(brief, category, extraction, ragContext = null) {
+  const contextSummary = summarizeRagContext(ragContext);
   const systemPrompt = `You are a senior freelance project consultant.
-Identify missing information, pricing risks, and focused follow-up questions before a freelancer quotes a project.`;
+Identify missing information, pricing risks, and at most ${MAX_FOLLOW_UP_QUESTIONS} focused follow-up questions before a freelancer quotes a project.
+Use local RAG context to identify common risks, but keep questions specific to the current brief.`;
 
   const userMessage = `Given this client brief and extracted requirements, identify gaps
-and generate follow-up questions a freelancer should ask before giving a quote.
+and generate only the top ${MAX_FOLLOW_UP_QUESTIONS} follow-up questions a freelancer should ask before giving a quote.
 
 Project category: ${category}
 Original brief: "${brief}"
 Extracted requirements: ${JSON.stringify(extraction, null, 2)}
+Local RAG context:
+${contextSummary}
 
 Respond with this exact JSON:
 {
@@ -75,5 +85,4 @@ Respond with this exact JSON:
   return validateGaps(result);
 }
 
-module.exports = { detectGaps, validateGaps };
-
+module.exports = { MAX_FOLLOW_UP_QUESTIONS, detectGaps, validateGaps };

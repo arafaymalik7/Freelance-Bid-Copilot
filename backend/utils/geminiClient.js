@@ -1,7 +1,9 @@
 const { GoogleGenAI } = require("@google/genai");
-require("dotenv").config();
+const { logDebug, logInfo } = require("./logger");
+require("dotenv").config({ quiet: true });
 
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+const DEFAULT_EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001";
 const RATE_LIMIT_MESSAGE = "API rate limit hit. Please wait a moment and try again.";
 
 let client;
@@ -34,6 +36,11 @@ function shouldRetry(error) {
     rawMessage.includes("unavailable") ||
     rawMessage.includes("high demand")
   );
+}
+
+function isModelNotFound(error) {
+  const rawMessage = `${error?.message || ""} ${error?.status || ""}`.toLowerCase();
+  return rawMessage.includes("404") && rawMessage.includes("not found");
 }
 
 function extractResponseText(response) {
@@ -71,8 +78,11 @@ function parseJson(rawText) {
 
 async function runRequest(systemPrompt, userMessage, responseSchema) {
   const ai = getClient();
+  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  const startedAt = Date.now();
+  logInfo("gemini_generate_start", { model });
   const response = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
+    model,
     contents: userMessage,
     config: {
       systemInstruction: systemPrompt,
@@ -83,7 +93,42 @@ async function runRequest(systemPrompt, userMessage, responseSchema) {
     },
   });
 
-  return parseJson(extractResponseText(response));
+  const parsed = parseJson(extractResponseText(response));
+  logInfo("gemini_generate_end", { model, duration_ms: Date.now() - startedAt });
+  return parsed;
+}
+
+function extractEmbeddingValues(response) {
+  const values = response?.embeddings?.[0]?.values || response?.embedding?.values || response?.values;
+
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new Error("Gemini returned an empty embedding response");
+  }
+
+  return values.map((value) => Number(value)).filter((value) => Number.isFinite(value));
+}
+
+async function runEmbeddingRequest(text) {
+  const ai = getClient();
+  const model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL;
+  const startedAt = Date.now();
+  logDebug("gemini_embedding_start", { model, input_chars: String(text || "").length });
+  const response = await ai.models.embedContent({
+    model,
+    contents: text,
+  });
+
+  const values = extractEmbeddingValues(response);
+  if (values.length === 0) {
+    throw new Error("Gemini returned an invalid embedding response");
+  }
+
+  logDebug("gemini_embedding_end", {
+    model,
+    duration_ms: Date.now() - startedAt,
+    dimensions: values.length,
+  });
+  return values;
 }
 
 async function callGemini(systemPrompt, userMessage, responseSchema) {
@@ -94,6 +139,7 @@ async function callGemini(systemPrompt, userMessage, responseSchema) {
       throw error;
     }
 
+    logInfo("gemini_generate_retry", { model: process.env.GEMINI_MODEL || DEFAULT_MODEL });
     await sleep(3000);
 
     try {
@@ -104,4 +150,40 @@ async function callGemini(systemPrompt, userMessage, responseSchema) {
   }
 }
 
-module.exports = { callGemini, DEFAULT_MODEL, RATE_LIMIT_MESSAGE };
+async function callGeminiEmbedding(text) {
+  try {
+    return await runEmbeddingRequest(text);
+  } catch (error) {
+    const model = process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL;
+
+    if (isModelNotFound(error)) {
+      throw new Error(
+        `Gemini embedding model "${model}" is not available for embedContent. Set GEMINI_EMBEDDING_MODEL=gemini-embedding-001.`,
+      );
+    }
+
+    if (!shouldRetry(error)) {
+      throw error;
+    }
+
+    logInfo("gemini_embedding_retry", {
+      model,
+    });
+    await sleep(3000);
+
+    try {
+      return await runEmbeddingRequest(text);
+    } catch (_retryError) {
+      throw new Error(RATE_LIMIT_MESSAGE);
+    }
+  }
+}
+
+module.exports = {
+  callGemini,
+  callGeminiEmbedding,
+  DEFAULT_EMBEDDING_MODEL,
+  DEFAULT_MODEL,
+  RATE_LIMIT_MESSAGE,
+  isModelNotFound,
+};

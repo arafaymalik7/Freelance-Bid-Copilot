@@ -7,6 +7,7 @@ const {
   coerceNumber,
   createError,
 } = require("../utils/validation");
+const { summarizeRagContext } = require("./ragContextBuilder");
 
 const SCOPE_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -89,15 +90,19 @@ function validateScope(result) {
   return result;
 }
 
-async function buildScope(brief, category, extraction) {
+async function buildScope(brief, category, extraction, ragContext = null) {
+  const contextSummary = summarizeRagContext(ragContext);
   const systemPrompt = `You are a project manager creating a realistic scope document.
-Be specific, avoid padding, and make sure the scope is useful for pricing and delivery planning.`;
+Be specific, avoid padding, and make sure the scope is useful for pricing and delivery planning.
+Use local RAG context for typical inclusions, exclusions, milestones, and risk controls.`;
 
   const userMessage = `Create a project scope for this freelance project.
 
 Category: ${category}
 Brief: "${brief}"
 Requirements: ${JSON.stringify(extraction, null, 2)}
+Local RAG context:
+${contextSummary}
 
 Respond with this exact JSON:
 {
@@ -121,4 +126,3 @@ Respond with this exact JSON:
 }
 
 module.exports = { buildScope, validateScope };
-

@@ -1,0 +1,7 @@
+[
+  { "id": "proposal_scope_first", "type": "proposal_pattern", "category": "all", "subcategory": "all", "guideline": "Open by showing clear understanding of the client need, then explain approach, scope, timeline, pricing, and next step." },
+  { "id": "proposal_ecommerce", "type": "proposal_pattern", "category": "web_development", "subcategory": "ecommerce_store", "guideline": "For ecommerce proposals, mention product catalog, checkout, order management, payment gateway, and content responsibilities." },
+  { "id": "proposal_mobile_mvp", "type": "proposal_pattern", "category": "mobile_app", "subcategory": "all", "guideline": "For mobile MVPs, clarify platform coverage, backend assumptions, notifications, app store support, and phased delivery." },
+  { "id": "proposal_design_handoff", "type": "proposal_pattern", "category": "ui_ux_design", "subcategory": "all", "guideline": "For design work, include screen count, prototype, revision rounds, source files, and developer handoff." },
+  { "id": "proposal_data_dashboard", "type": "proposal_pattern", "category": "data_analytics", "subcategory": "all", "guideline": "For analytics work, mention data validation, KPI definitions, dashboard pages, refresh method, and handoff documentation." }
+]

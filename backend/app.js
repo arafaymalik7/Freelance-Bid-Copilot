@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const pipelineRouter = require("./routes/pipeline");
+const workspaceRouter = require("./routes/workspace");
+const feedbackRouter = require("./routes/feedback");
+const knowledgeRouter = require("./routes/knowledge");
 
 function createApp() {
   const app = express();
@@ -13,6 +16,9 @@ function createApp() {
   });
 
   app.use("/api", pipelineRouter);
+  app.use("/api/workspace", workspaceRouter);
+  app.use("/api/feedback", feedbackRouter);
+  app.use("/api/knowledge", knowledgeRouter);
 
   app.use((err, _req, res, _next) => {
     const status = Number.isInteger(err.statusCode) ? err.statusCode : 500;
@@ -26,4 +32,3 @@ function createApp() {
 }
 
 module.exports = { createApp };
-

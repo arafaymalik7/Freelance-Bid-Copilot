@@ -3,7 +3,7 @@ jest.mock("../utils/geminiClient", () => ({
 }));
 
 const { callGemini } = require("../utils/geminiClient");
-const { classifyProject } = require("../services/classifier");
+const { classifyProject, validateClassification } = require("../services/classifier");
 const { classificationFixture } = require("./fixtures");
 
 describe("classifier service", () => {
@@ -46,5 +46,15 @@ describe("classifier service", () => {
       "Incomplete response from AI: missing category",
     );
   });
-});
 
+  test("normalizes SaaS and tool-like web subcategories to saas_tool", () => {
+    const result = validateClassification({
+      ...classificationFixture,
+      category: "web_development",
+      subcategory: "AI PDF parser dashboard",
+      complexity_signal: "high",
+    });
+
+    expect(result.subcategory).toBe("saas_tool");
+  });
+});

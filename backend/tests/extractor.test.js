@@ -49,14 +49,13 @@ describe("extractor and gap detector services", () => {
     expect(result.deadline_hint).toBeNull();
   });
 
-  test("gap detector returns four to six focused follow-up questions", async () => {
+  test("gap detector returns at most three focused follow-up questions", async () => {
     callGemini.mockResolvedValue(gapsFixture);
 
     const result = await detectGaps("Need an online store fast", "web_development", extractionFixture);
 
-    expect(result.follow_up_questions.length).toBeGreaterThanOrEqual(4);
-    expect(result.follow_up_questions.length).toBeLessThanOrEqual(6);
+    expect(result.follow_up_questions.length).toBeGreaterThan(0);
+    expect(result.follow_up_questions.length).toBeLessThanOrEqual(3);
     expect(result.follow_up_questions[0].question).toMatch(/\?/);
   });
 });
-

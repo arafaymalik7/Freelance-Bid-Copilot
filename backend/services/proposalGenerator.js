@@ -1,5 +1,6 @@
 const { callGemini } = require("../utils/geminiClient");
 const { assertRequiredKeys, assertString } = require("../utils/validation");
+const { summarizeRagContext } = require("./ragContextBuilder");
 
 const PROPOSAL_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -21,9 +22,11 @@ function validateProposal(result) {
   return result;
 }
 
-async function generateProposal(brief, category, extraction, scope, pricing) {
+async function generateProposal(brief, category, extraction, scope, pricing, ragContext = null, feedbackHints = {}) {
+  const contextSummary = summarizeRagContext(ragContext);
   const systemPrompt = `You are a professional proposal writer for freelancers.
-Write concise, confident, specific proposals without filler or hype.`;
+Write concise, confident, specific proposals without filler or hype.
+Ground claims in the brief, scoped deliverables, pricing package, and local RAG context.`;
 
   const userMessage = `Write a professional freelance proposal and a short client reply.
 
@@ -34,6 +37,9 @@ Features: ${extraction.features.join(", ")}
 Timeline: ${scope.total_estimated_days} days total
 Recommended price range: $${pricing.recommended.min} - $${pricing.recommended.max}
 Payment structure: ${scope.payment_structure}
+Feedback hints: ${JSON.stringify(feedbackHints, null, 2)}
+Local RAG context:
+${contextSummary}
 
 Respond with this exact JSON:
 {
@@ -47,4 +53,3 @@ Respond with this exact JSON:
 }
 
 module.exports = { generateProposal, validateProposal };
-

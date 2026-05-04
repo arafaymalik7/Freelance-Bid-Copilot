@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "build:index": "cross-env BIDCOPILOT_INDEX_BUILD=true node scripts/buildVectorIndex.js",
     "test": "jest --runInBand",
-    "test:live": "cross-env LIVE_GEMINI_TESTS=1 jest --runInBand --testPathPatterns=live"
+    "test:live": "cross-env LIVE_GEMINI_TESTS=1 jest --runInBand --testPathPatterns=pipeline.live",
+    "test:live:workspace": "cross-env LIVE_GEMINI_TESTS=1 jest --runInBand --testPathPatterns=workspace.live"
   },
   "keywords": [
     "express",
