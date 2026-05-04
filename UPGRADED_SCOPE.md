@@ -41,9 +41,12 @@ Files:
 
 Current size:
 
-- 60+ total records
+- 80+ total records
 - categories include web development, mobile apps, UI/UX, content writing, data analytics, and general rules
-- mobile knowledge includes social feed, chat, community, creator video, marketplace, finance, habit, and delivery cases
+- web knowledge includes ecommerce, SaaS tools, document parsers, booking, membership/course sites, real estate listings, nonprofit donation sites, service marketplaces, and AI chatbot tools
+- mobile knowledge includes social feed, chat, community, creator video, marketplace, finance, habit, fitness, event ticketing, logistics/driver dispatch, education quiz, and mobile game cases
+- UI/UX knowledge includes dashboards, mobile app design, website design, design systems, and ecommerce checkout redesigns
+- content/data knowledge includes SEO blogs, technical content, product copy, email sequences, landing page copy, BI dashboards, automation reporting, churn analysis, and data cleanup/migration
 
 Each record has enough searchable text to support embeddings and retrieval.
 

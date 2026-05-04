@@ -57,4 +57,30 @@ describe("classifier service", () => {
 
     expect(result.subcategory).toBe("saas_tool");
   });
+
+  test("normalizes expanded freelance subcategories for stronger RAG matching", () => {
+    const cases = [
+      ["web_development", "property MLS listing portal", "real_estate_site"],
+      ["web_development", "nonprofit donation fundraising site", "donation_site"],
+      ["web_development", "two sided provider marketplace", "marketplace_web_app"],
+      ["mobile_app", "fitness coaching workout app", "health_fitness_app"],
+      ["mobile_app", "event ticketing QR check-in app", "event_ticketing_app"],
+      ["mobile_app", "driver dispatch proof of delivery", "logistics_app"],
+      ["mobile_app", "education quiz question bank", "education_app"],
+      ["ui_ux_design", "design system component library", "design_system"],
+      ["content_writing", "launch email nurture sequence", "email_sequence"],
+      ["data_analytics", "customer churn cohort retention", "customer_analysis"],
+      ["other", "CRM lead routing automation", "crm_automation"],
+    ];
+
+    cases.forEach(([category, subcategory, expected]) => {
+      const result = validateClassification({
+        ...classificationFixture,
+        category,
+        subcategory,
+      });
+
+      expect(result.subcategory).toBe(expected);
+    });
+  });
 });

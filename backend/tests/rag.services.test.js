@@ -1,4 +1,4 @@
-const { validateKnowledgeBase } = require("../services/knowledgeBaseService");
+const { loadKnowledgeBase, validateKnowledgeBase } = require("../services/knowledgeBaseService");
 const {
   assertFakeEmbeddingsAllowed,
   createDeterministicTestEmbedding,
@@ -53,8 +53,44 @@ describe("RAG knowledge and vector services", () => {
     const result = validateKnowledgeBase();
 
     expect(result.totalEntries).toBeGreaterThanOrEqual(40);
-    expect(result.totalEntries).toBeLessThanOrEqual(90);
-    expect(result.counts.projectCases).toBeGreaterThanOrEqual(20);
+    expect(result.totalEntries).toBeLessThanOrEqual(120);
+    expect(result.counts.projectCases).toBeGreaterThanOrEqual(40);
+  });
+
+  test("expanded project cases cover major freelance subcategories", () => {
+    const { projectCases } = loadKnowledgeBase();
+    const casesById = new Map(projectCases.map((entry) => [entry.id, entry]));
+    const expectedCases = [
+      ["case_web_real_estate_028", "web_development", "real_estate_site"],
+      ["case_web_healthcare_booking_029", "web_development", "booking_site"],
+      ["case_web_nonprofit_donation_030", "web_development", "donation_site"],
+      ["case_web_marketplace_services_031", "web_development", "marketplace_web_app"],
+      ["case_web_ai_chatbot_tool_032", "web_development", "saas_tool"],
+      ["case_mobile_health_fitness_033", "mobile_app", "health_fitness_app"],
+      ["case_mobile_event_ticketing_034", "mobile_app", "event_ticketing_app"],
+      ["case_mobile_logistics_driver_035", "mobile_app", "logistics_app"],
+      ["case_mobile_education_quiz_036", "mobile_app", "education_app"],
+      ["case_uiux_design_system_037", "ui_ux_design", "design_system"],
+      ["case_uiux_checkout_redesign_038", "ui_ux_design", "ecommerce_checkout_design"],
+      ["case_content_email_sequence_039", "content_writing", "email_sequence"],
+      ["case_content_landing_page_copy_040", "content_writing", "landing_page_copy"],
+      ["case_data_churn_analysis_041", "data_analytics", "customer_analysis"],
+      ["case_data_migration_cleanup_042", "data_analytics", "data_cleaning_migration"],
+      ["case_other_crm_automation_043", "other", "crm_automation"],
+    ];
+
+    expectedCases.forEach(([id, category, subcategory]) => {
+      const entry = casesById.get(id);
+
+      expect(entry).toBeDefined();
+      expect(entry.category).toBe(category);
+      expect(entry.subcategory).toBe(subcategory);
+      expect(entry.features.length).toBeGreaterThanOrEqual(5);
+      expect(entry.typical_questions.length).toBeGreaterThanOrEqual(4);
+      expect(entry.risk_flags.length).toBeGreaterThanOrEqual(2);
+      expect(entry.price_range.min).toBeGreaterThan(0);
+      expect(entry.price_range.max).toBeGreaterThan(entry.price_range.min);
+    });
   });
 
   test("fake embeddings are deterministic and normalized", () => {
@@ -281,6 +317,58 @@ describe("RAG knowledge and vector services", () => {
     expect(ragContext.pricing_rules.map((item) => item.id)).toContain("price_web_parser_tool_base");
     expect(ragContext.risk_patterns.map((item) => item.id)).toContain("risk_parser_accuracy");
     expect(ragContext.retrieval_quality.coverage_level).toBe("strong");
+  });
+
+  test("hybrid retrieval discovers expanded project-case subcategories", async () => {
+    const scenarios = [
+      {
+        brief: "Build a real estate website with MLS property listings, map search, saved homes, agent profiles, and lead forms.",
+        classification: {
+          category: "web_development",
+          subcategory: "real_estate_site",
+          complexity_signal: "medium",
+        },
+        expectedCase: "case_web_real_estate_028",
+      },
+      {
+        brief: "Create a fitness coaching mobile app with workout plans, exercise videos, check-ins, progress tracking, and coach messaging.",
+        classification: {
+          category: "mobile_app",
+          subcategory: "health_fitness_app",
+          complexity_signal: "medium",
+        },
+        expectedCase: "case_mobile_health_fitness_033",
+      },
+      {
+        brief: "Design a SaaS design system in Figma with tokens, components, dashboard patterns, responsive states, and developer handoff.",
+        classification: {
+          category: "ui_ux_design",
+          subcategory: "design_system",
+          complexity_signal: "high",
+        },
+        expectedCase: "case_uiux_design_system_037",
+      },
+      {
+        brief: "Analyze subscription customer churn with cohort retention, cancellation reasons, customer segments, and recommendations.",
+        classification: {
+          category: "data_analytics",
+          subcategory: "customer_analysis",
+          complexity_signal: "medium",
+        },
+        expectedCase: "case_data_churn_analysis_041",
+      },
+    ];
+
+    for (const scenario of scenarios) {
+      const { ragContext } = await retrieveKnowledgeForBrief({
+        brief: scenario.brief,
+        classification: scenario.classification,
+        topK: 12,
+      });
+
+      expect(ragContext.similar_cases.map((item) => item.id)).toContain(scenario.expectedCase);
+      expect(["moderate", "strong"]).toContain(ragContext.retrieval_quality.coverage_level);
+    }
   });
 
   test("coverage is weak when only broad or unrelated references are available", async () => {

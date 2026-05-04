@@ -26,6 +26,22 @@ function normalizeSubcategory(value, category) {
       : "general";
 
   if (category === "web_development") {
+    if (/(^|_)(ai|chatbot|llm|rag|copilot|assistant|knowledge_base)(_|$)/.test(normalized)) {
+      return "saas_tool";
+    }
+
+    if (/(real_estate|property|properties|listing|listings|mls|idx)/.test(normalized)) {
+      return "real_estate_site";
+    }
+
+    if (/(nonprofit|charity|donation|donor|fundraising|volunteer)/.test(normalized)) {
+      return "donation_site";
+    }
+
+    if (/(marketplace|two_sided|provider|providers|job_board|service_marketplace)/.test(normalized)) {
+      return "marketplace_web_app";
+    }
+
     if (/(saas|web_app|webapp|dashboard|portal|tool|parser|ocr|document|extract|crm|workflow|admin_app|internal_app)/.test(normalized)) {
       return "saas_tool";
     }
@@ -44,6 +60,22 @@ function normalizeSubcategory(value, category) {
   }
 
   if (category === "mobile_app") {
+    if (/(fitness|wellness|workout|health|coach|coaching|exercise)/.test(normalized)) {
+      return "health_fitness_app";
+    }
+
+    if (/(event|ticket|ticketing|qr|checkin|check_in)/.test(normalized)) {
+      return "event_ticketing_app";
+    }
+
+    if (/(logistics|driver|dispatch|route|proof_of_delivery|pod|delivery_operations)/.test(normalized)) {
+      return "logistics_app";
+    }
+
+    if (/(education|quiz|student|tutor|learning|lesson|question_bank)/.test(normalized)) {
+      return "education_app";
+    }
+
     if (/(game|gaming|unity|leaderboard)/.test(normalized)) {
       return "mobile_game";
     }
@@ -55,6 +87,40 @@ function normalizeSubcategory(value, category) {
     if (/(chat|messaging|message)/.test(normalized)) {
       return "chat_app";
     }
+  }
+
+  if (category === "ui_ux_design") {
+    if (/(design_system|component|components|tokens|library)/.test(normalized)) {
+      return "design_system";
+    }
+
+    if (/(checkout|ecommerce|cart|commerce)/.test(normalized)) {
+      return "ecommerce_checkout_design";
+    }
+  }
+
+  if (category === "content_writing") {
+    if (/(email|sequence|newsletter|drip|nurture)/.test(normalized)) {
+      return "email_sequence";
+    }
+
+    if (/(landing|sales_page|conversion|copywriting)/.test(normalized)) {
+      return "landing_page_copy";
+    }
+  }
+
+  if (category === "data_analytics") {
+    if (/(churn|retention|cohort|customer|segmentation)/.test(normalized)) {
+      return "customer_analysis";
+    }
+
+    if (/(migration|cleanup|cleaning|dedupe|deduplication|crm|spreadsheet)/.test(normalized)) {
+      return "data_cleaning_migration";
+    }
+  }
+
+  if (category === "other" && /(crm|lead|routing|automation|zapier|make)/.test(normalized)) {
+    return "crm_automation";
   }
 
   return normalized || "general";
